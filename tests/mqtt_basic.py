@@ -24,7 +24,7 @@ client.on_message = on_message
 client.on_publish = on_publish
 
 # mqtt+ssl://
-# client.tls_set_context(context=None)
+client.tls_set_context(context=None)
 broker_url = "b-d444068d-a1be-4b51-987e-2026a6ba7768-1.mq.us-east-1.amazonaws.com"
 # broker_url = "test.mosquitto.org"
 # broker_port = 1883

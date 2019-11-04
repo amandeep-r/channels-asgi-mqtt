@@ -136,6 +136,7 @@ class Server(object):
         This is the main loop pool for receiving MQTT messages
         """
         if self.username:
+            self.client.tls_set_context(context=None)
             self.client.username_pw_set(username=self.username, password=self.password)
         
         self.client.connect(self.host, self.port)
