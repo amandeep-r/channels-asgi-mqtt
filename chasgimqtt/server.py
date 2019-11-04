@@ -7,6 +7,7 @@ import signal
 import json
 
 import paho.mqtt.client as mqtt
+import base64
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,33 @@ class Server(object):
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
 
+        self.rootCAPath = "root-CA.crt"
+        self.certificatePath = "pem.crt"
+        self.privateKeyPath = "privkey.out"
+
+        try:
+            with open(self.certificatePath,"wb") as f:
+                # print(os.getenv("AWS_CERT"))
+                f.write(base64.b64decode(os.getenv("AWS_CERT")) )
+
+            with open(self.privateKeyPath,"wb") as f:
+                f.write(base64.b64decode(os.getenv("AWS_PK")) )
+
+            with open(self.rootCAPath, "w") as f:
+                try:
+                    f.write(requests.get(
+                        "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem").text)
+                    break
+                except Exception as e:
+                    logger.error("SSL ERROR")
+                    logger.error(e)
+
+        except TypeError as e:
+            logger = logging.getLogger('errors')
+            logger.debug("Messenger Error: Certificate and Private Key ENV Variable Missing! %s", e)
+
+
+        self.client.tls_set(ca_certs=self.rootCAPath, certfile=self.certificatePath, keyfile=self.privateKeyPath)
         self.topics_subscription = topics_subscription or [("#", 2),]
         assert isinstance(self.topics_subscription, list), "Topic subscription must be a list with (topic, qos)"
 
