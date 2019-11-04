@@ -15,7 +15,7 @@ def mqtt_test(self, msg):
     async_to_sync(channel_layer.send)('mqtt', {
         'type': 'mqtt.pub',
         'text': {
-            'topic': 'testmq', 
+            'topic': 'bigtest/test', 
             'payload': f"{msg} - {self.request.id}"
         }
     })

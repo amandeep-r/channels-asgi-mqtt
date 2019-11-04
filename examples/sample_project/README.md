@@ -1,3 +1,8 @@
+My Commands
+python3 manage.py runserver
+chasgimqtt -H test.mosquitto.org -p 1883 --topic=bigtest/#:2 mysite.asgi:channel_layer
+python3 manage.py runworker mqtt
+
 # Sample Project
 this project uses chasgimqtt interface to receive data from mqtt broker.
 follow the steps below to run it:

@@ -1,0 +1,4 @@
+django
+channels
+celery
+channels_redis

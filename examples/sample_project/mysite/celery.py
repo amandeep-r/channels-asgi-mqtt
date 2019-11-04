@@ -11,7 +11,7 @@ app.conf.beat_schedule = {
     'msg-every-5-seconds': {
         'task': 'mqtt_app.tasks.mqtt_test',
         'schedule': 5,
-        'args': ('hello', )
+        'args': ('hello 2', )
     },
 }
 
