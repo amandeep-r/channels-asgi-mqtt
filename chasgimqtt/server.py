@@ -49,7 +49,7 @@ class Server(object):
         self.port = port
         # self.client_id = client_id
 
-        self.clientid = "CLOUD_SERVER_" + str(uuid.uuid4().hex)[0:6] #NOT farm serial number
+        self.client_id = "CLOUD_SERVER_" + str(uuid.uuid4().hex)[0:6] #NOT farm serial number
 
         # self.client = AWSIoTMQTTClient(self.clientId)
 
