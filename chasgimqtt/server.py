@@ -50,14 +50,6 @@ class Server(object):
         port = 8883
 
         self.client = AWSIoTMQTTClient(self.clientId)
-        self.client.configureEndpoint(host, port)
-        self.client.configureCredentials(rootCAPath, privateKeyPath, certificatePath)
-
-        self.client.configureAutoReconnectBackoffTime(1, 32, 20)
-        self.client.configureOfflinePublishQueueing(-1)  # Infinite offline Publish self.in_topicqueueing
-        self.client.configureDrainingFrequency(2)  # Draining: 2 Hz
-        self.client.configureConnectDisconnectTimeout(10)  # 10 sec
-        self.client.configureMQTTOperationTimeout(5)  # 5 sec
 
         # self.client = mqtt.Client(client_id=self.client_id, userdata={
         #     "server": self,
@@ -73,14 +65,22 @@ class Server(object):
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
 
-        self.certRootDir = "/home/skorn/Documents/mqtt_certs/"
+        self.certRootDir = "/usr/src/app/mqtt_certs/"
         self.rootCAPath = "root-CA.crt"
         self.certificatePath = "pem.crt"
         self.privateKeyPath = "privkey.out"
         self.configureCertFiles()
 
+        self.client.configureEndpoint(host, port)
+        self.client.configureCredentials(self.rootCAPath, self.privateKeyPath, self.certificatePath)
 
-        self.client.tls_set(ca_certs=self.rootCAPath, certfile=self.certificatePath, keyfile=self.privateKeyPath)
+        self.client.configureAutoReconnectBackoffTime(1, 32, 20)
+        self.client.configureOfflinePublishQueueing(-1)  # Infinite offline Publish self.in_topicqueueing
+        self.client.configureDrainingFrequency(2)  # Draining: 2 Hz
+        self.client.configureConnectDisconnectTimeout(10)  # 10 sec
+        self.client.configureMQTTOperationTimeout(5)  # 5 sec
+
+        # self.client.tls_set(ca_certs=self.rootCAPath, certfile=self.certificatePath, keyfile=self.privateKeyPath)
         self.topics_subscription = topics_subscription or [("#", 2),]
         assert isinstance(self.topics_subscription, list), "Topic subscription must be a list with (topic, qos)"
 
