@@ -6,8 +6,12 @@ import time
 import signal
 import json
 
+from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
+from AWSIoTPythonSDK.exception import AWSIoTExceptions
+
 import paho.mqtt.client as mqtt
 import base64
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -40,42 +44,40 @@ class Server(object):
         self.host = host
         self.port = port
         self.client_id = client_id
-        self.client = mqtt.Client(client_id=self.client_id, userdata={
-            "server": self,
-            "channel": self.channel,
-            "host": self.host,
-            "port": self.port,
-        })
-        self.username = username
+
+        host = "a37viqgs4xlb64.iot.us-east-1.amazonaws.com"
+        self.clientId = "CLOUD_SERVER_" + str(uuid.uuid4().hex)[0:6] #NOT farm serial number
+        port = 8883
+
+        self.client = AWSIoTMQTTClient(self.clientId)
+        self.client.configureEndpoint(host, port)
+        self.client.configureCredentials(rootCAPath, privateKeyPath, certificatePath)
+
+        self.client.configureAutoReconnectBackoffTime(1, 32, 20)
+        self.client.configureOfflinePublishQueueing(-1)  # Infinite offline Publish self.in_topicqueueing
+        self.client.configureDrainingFrequency(2)  # Draining: 2 Hz
+        self.client.configureConnectDisconnectTimeout(10)  # 10 sec
+        self.client.configureMQTTOperationTimeout(5)  # 5 sec
+
+        # self.client = mqtt.Client(client_id=self.client_id, userdata={
+        #     "server": self,
+        #     "channel": self.channel,
+        #     "host": self.host,
+        #     "port": self.port,
+        # })
+        # self.username = username
+        # Using certfiles instead of username/password
+        self.username = None
         self.password = password
         self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
 
+        self.certRootDir = "/home/skorn/Documents/mqtt_certs/"
         self.rootCAPath = "root-CA.crt"
         self.certificatePath = "pem.crt"
         self.privateKeyPath = "privkey.out"
-
-        try:
-            with open(self.certificatePath,"wb") as f:
-                # print(os.getenv("AWS_CERT"))
-                f.write(base64.b64decode(os.getenv("AWS_CERT")) )
-
-            with open(self.privateKeyPath,"wb") as f:
-                f.write(base64.b64decode(os.getenv("AWS_PK")) )
-
-            with open(self.rootCAPath, "w") as f:
-                try:
-                    f.write(requests.get(
-                        "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem").text)
-                    break
-                except Exception as e:
-                    logger.error("SSL ERROR")
-                    logger.error(e)
-
-        except TypeError as e:
-            logger = logging.getLogger('errors')
-            logger.debug("Messenger Error: Certificate and Private Key ENV Variable Missing! %s", e)
+        self.configureCertFiles()
 
 
         self.client.tls_set(ca_certs=self.rootCAPath, certfile=self.certificatePath, keyfile=self.privateKeyPath)
@@ -86,6 +88,22 @@ class Server(object):
         self.mqtt_channel_pub = mqtt_channel_pub or "mqtt.pub"
         self.mqtt_channel_sub = mqtt_channel_sub or "mqtt.sub"
 
+
+    def configureCertFiles(self):
+        try:
+            with open(self.certRootDir + self.certificatePath, "wb") as f:
+                # print(os.getenv("AWS_CERT"))
+                f.write(base64.b64decode(os.getenv("AWS_CERT")) )
+
+            with open(self.certRootDir + self.privateKeyPath, "wb") as f:
+                f.write(base64.b64decode(os.getenv("AWS_PK")) )
+
+            with open(self.certRootDir + self.rootCAPath, "w") as f:
+                    f.write(requests.get(
+                        "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem").text)
+        except Exception as e:
+            logger = logging.getLogger('errors')
+            logger.debug("Messenger Error: Certificate and Private Key ENV Variable Missing! %s", e)
 
     def _on_connect(self, client, userdata, flags, rc):
         logger.info("Connected with status {}".format(rc))

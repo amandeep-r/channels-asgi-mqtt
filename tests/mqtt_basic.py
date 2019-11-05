@@ -44,7 +44,7 @@ broker_url = "a37viqgs4xlb64-ats.iot.us-east-1.amazonaws.com"
 # broker_port = 1883
 broker_port = 8883
 
-cert_root = "/home/skorn/cert_test"
+cert_root = "/home/skorn/Documents/mqtt_certs/"
 rootCAPath = cert_root+"root-CA.crt"
 certificatePath = cert_root+"pem.crt"
 privateKeyPath = cert_root+"privkey.out"
