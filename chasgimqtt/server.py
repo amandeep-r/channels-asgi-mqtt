@@ -40,6 +40,8 @@ class Server(object):
             client_id=None, topics_subscription=None, mqtt_channel_name = None, 
             mqtt_channel_sub=None, mqtt_channel_pub=None):
 
+
+        self.logger = logging.getLogger("mqtt")
         self.channel = channel
         self.host = host
         self.port = port
@@ -100,51 +102,49 @@ class Server(object):
                     f.write(requests.get(
                         "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem").text)
         except Exception as e:
-            logger = logging.getLogger('errors')
-            logger.debug("Messenger Error: Certificate and Private Key ENV Variable Missing! %s", e)
+            self.logger.debug("Messenger Error: Certificate and Private Key ENV Variable Missing! %s", e)
 
     def _on_connect(self, client, userdata, flags, rc):
-        logger.info("Connected with status {}".format(rc))
+        self.logger.info("Connected with status {}".format(rc))
         print("subscribing to: %r" % self.topics_subscription)
         rv = client.subscribe(self.topics_subscription,1,self._on_message)
         print("Subscribe Status: %r" % rv)
 
 
     def _on_disconnect(self, client, userdata, rc):
-        logger.info("Disconnected")
+        self.logger.info("Disconnected")
         if not self.stop:
             j = 3
             for i in range(j):
-                logger.info("Trying to reconnect")
+                self.logger.info("Trying to reconnect")
                 try:
                     client.reconnect()
-                    logger.info("Reconnected")
+                    self.logger.info("Reconnected")
                     break
                 except Exception as e:
                     if i < j:
-                        logger.warn(e)
+                        self.logger.warn(e)
                         time.sleep(1)
                         continue
                     else:
                         raise
 
     def _mqtt_send_got_result(self, future):
-        logger.debug("Sending message to MQTT channel.")
+        self.logger.debug("Sending message to MQTT channel.")
         result = future.result()
         if result:
-            logger.debug("Result: %s", result)
+            self.logger.debug("Result: %s", result)
 
     def _on_message(self, client, userdata, message):
-        logger.debug("Received message from topic {}".format(message.topic))
+        self.logger.debug("Received message from topic {}".format(message.topic))
         payload = message.payload.decode("utf-8")
 
         try:
             payload = json.loads(payload)
-        except:
-            logger.debug("Payload is nos a JSON Serializable")
-            pass
+        except Exception as e:
+            self.logger.debug("Payload is nos a JSON Serializable: %r", e)
         
-        logger.debug("Raw message {}".format(payload))
+        self.logger.debug("Raw message {}".format(payload))
 
         # Compose a message for Channel with raw data received from MQTT
         msg = {
@@ -173,8 +173,8 @@ class Server(object):
             future.add_done_callback(self._mqtt_send_got_result)
 
         except Exception as e:
-            logger.error("Cannot send message {}".format(msg))
-            logger.exception(e)
+            self.logger.error("Cannot send message {}".format(msg))
+            self.logger.exception(e)
 
 
     async def client_pool_start(self):
@@ -182,12 +182,13 @@ class Server(object):
         This is the main loop pool for receiving MQTT messages
         """
         if self.username:
+            self.logger.info("Connecting with Username: Using TLS!!!")
             self.client.tls_set_context(context=None)
             self.client.username_pw_set(username=self.username, password=self.password)
         
         self.client.connect()
 
-        logger.info("Starting loop")
+        self.logger.info("Starting loop")
 
         while True:
             # self.client.loop(0.1)
@@ -199,7 +200,7 @@ class Server(object):
         """
         Receive a menssaje from Channel `mqtt.pub` and send it to MQTT broker
         """
-        logger.info("Receive raw messages:\r\n%s", msg)
+        self.logger.info("Receive raw messages:\r\n%s", msg)
         # We only listen for messages from mqtt_channel_pub
         if msg['type'] == self.mqtt_channel_pub:
 
@@ -208,7 +209,7 @@ class Server(object):
             if not isinstance(payload, dict):
                 payload = json.loads(payload)
 
-            logger.info("Receive a menssage with payload:\r\n%s", msg)
+            self.logger.info("Receive a menssage with payload:\r\n%s", msg)
             self.client.publish(
                     payload['topic'], 
                     payload['payload'], 
@@ -217,14 +218,14 @@ class Server(object):
 
 
     async def client_pool_message(self):
-        logger.info("Loop for messages pool")
+        self.logger.info("Loop for messages pool")
 
         while True:
-            logger.info("Wait for a message from channel %s", self.mqtt_channel_name)
+            self.logger.info("Wait for a message from channel %s", self.mqtt_channel_name)
             self._mqtt_receive(await self.channel.receive(self.mqtt_channel_name))
 
     def stop_server(self, signum):
-        logger.info("Received signal {}, terminating".format(signum))
+        self.logger.info("Received signal {}, terminating".format(signum))
         self.stop = True
         for task in asyncio.Task.all_tasks():
             task.cancel()
@@ -257,5 +258,6 @@ class Server(object):
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())            
             loop.close()
+            self.logger.info("Successfully stopped event loop. Disconnecting from MQTT.")
         
         self.client.disconnect()
