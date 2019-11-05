@@ -189,8 +189,9 @@ class Server(object):
             self.client.tls_set_context(context=None)
             self.client.username_pw_set(username=self.username, password=self.password)
         
-        self.client.connect()
+        rv = self.client.connect()
 
+        self.logger.info("Connection Status: %r", rv)
         self.logger.info("Starting loop")
 
         while True:
