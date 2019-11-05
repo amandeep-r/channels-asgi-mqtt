@@ -109,7 +109,7 @@ class Server(object):
     def _on_connect(self, client, userdata, flags, rc):
         self.logger.info("Connected with status {}".format(rc))
         print("subscribing to: %r" % self.topics_subscription)
-        rv = client.subscribe(self.topics_subscription,1,self._on_message)
+        rv,test = client.subscribe(self.topics_subscription,1,self._on_message)
         print("Subscribe Status: %r" % rv)
 
 
