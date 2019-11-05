@@ -43,11 +43,9 @@ class Server(object):
         self.channel = channel
         self.host = host
         self.port = port
-        self.client_id = client_id
+        # self.client_id = client_id
 
-        host = "a37viqgs4xlb64.iot.us-east-1.amazonaws.com"
         self.clientId = "CLOUD_SERVER_" + str(uuid.uuid4().hex)[0:6] #NOT farm serial number
-        port = 8883
 
         self.client = AWSIoTMQTTClient(self.clientId)
 
@@ -71,7 +69,7 @@ class Server(object):
         self.privateKeyPath = "privkey.out"
         self.configureCertFiles()
 
-        self.client.configureEndpoint(host, port)
+        self.client.configureEndpoint(self.host, self.port)
         self.client.configureCredentials(self.rootCAPath, self.privateKeyPath, self.certificatePath)
 
         self.client.configureAutoReconnectBackoffTime(1, 32, 20)
@@ -190,7 +188,7 @@ class Server(object):
         logger.info("Starting loop")
 
         while True:
-            self.client.loop(0.1)
+            # self.client.loop(0.1)
             #logger.debug("Restarting loop")
             await asyncio.sleep(0.1)
 
