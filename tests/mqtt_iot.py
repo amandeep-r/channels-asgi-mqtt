@@ -74,6 +74,7 @@ mqtt_client.configureConnectDisconnectTimeout(10)  # 10 sec
 mqtt_client.configureMQTTOperationTimeout(5)  # 5 sec
 
 mqtt_client.connect()
+mqtt_client.subscribe("babylon/farm_out")
 
 while True:
 	print("mqtt still alive!")
