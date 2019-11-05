@@ -82,8 +82,8 @@ client.tls_set(ca_certs=rootCAPath,certfile=certificatePath, keyfile=privateKeyP
 # client = os.environ["SERIAL_NUM"] + str(uuid.uuid4().hex)[0:6]
 # client.username_pw_set("sam", password="testtest1234")
 # client.connect(broker_url, broker_port, 60)
-client.connect_async(broker_url, broker_port, 60)
-
+rv = client.connect_async(broker_url, broker_port, 60)
+print(rv)
 # sleep(1)
 # client.loop_forever()
 client.loop_start()

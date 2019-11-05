@@ -103,8 +103,8 @@ class Server(object):
                 f.write(base64.b64decode(os.getenv("AWS_PK")) )
 
             with open(self.certRootDir + self.rootCAPath, "w") as f:
-                pem_url = "https://www.amazontrust.com/repository/AmazonRootCA1.pem"
-                # pem_url = "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem"     
+                # pem_url = "https://www.amazontrust.com/repository/AmazonRootCA1.pem"
+                pem_url = "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem"
                 f.write(requests.get(pem_url).text)
         except Exception as e:
             self.logger.debug("Messenger Error: Certificate and Private Key ENV Variable Missing! %s", e)
@@ -199,7 +199,7 @@ class Server(object):
 
         while True:
             self.client.loop(0.1)
-            self.logger.debug("Restarting loop")
+            # self.logger.debug("Restarting loop")
             await asyncio.sleep(0.1)
 
 
