@@ -13,6 +13,8 @@ import paho.mqtt.client as mqtt
 import base64
 import uuid
 
+import requests
+
 logger = logging.getLogger(__name__)
 
 async def mqtt_send(future, channel_layer, channel, event):
@@ -181,6 +183,7 @@ class Server(object):
         """
         This is the main loop pool for receiving MQTT messages
         """
+        self.logger.debug("Inside Client Pool Start!")
         if self.username:
             self.logger.info("Connecting with Username: Using TLS!!!")
             self.client.tls_set_context(context=None)
