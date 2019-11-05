@@ -35,7 +35,7 @@ def on_subscribe(client, userdata, mid, granted_qos):
 	print("Successful Subscribe")
 
 
-client = mqtt.Client(client_id="CLOUD_SERVER_TEST_" + str(uuid.uuid4().hex)[0:6])
+client = mqtt.Client(client_id="CLOUD_TEST_" + str(uuid.uuid4().hex)[0:6])
 client.on_connect = on_connect
 client.on_message = on_message
 client.on_publish = on_publish
@@ -81,12 +81,12 @@ except Exception as e:
 client.tls_set(ca_certs=rootCAPath,certfile=certificatePath, keyfile=privateKeyPath, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_SSLv23)
 # client = os.environ["SERIAL_NUM"] + str(uuid.uuid4().hex)[0:6]
 # client.username_pw_set("sam", password="testtest1234")
-client.connect(broker_url, broker_port, 60)
-# client.connect_async(broker_url, broker_port, 60)
+# client.connect(broker_url, broker_port, 60)
+client.connect_async(broker_url, broker_port, 60)
 
-sleep(1)
-client.loop_forever()
-# client.loop_start()
+# sleep(1)
+# client.loop_forever()
+client.loop_start()
 
 test_data = {
 	'serial_num': '25277782', 'water_valve_on': None, 'water_gpd': 0.0,
@@ -97,14 +97,14 @@ test_data = {
 }
 
 while True:
-	client.loop(0.1)
+	# client.loop(0.5)
 	ptime = datetime.now().isoformat()
 	test_data['message'] = ptime
 	test_data['water_gpd'] += 0.25
-	client.publish("babylon/farm_out", json.dumps(test_data), qos=2)
+	client.publish("babylon/farm_out", json.dumps(test_data), qos=1)
 	# .wait_for_publish()
 	print("published: %s" % ptime)
-	sleep(5)
+	sleep(2)
 
 # Blocking call that processes network traffic, dispatches callbacks and
 # handles reconnecting.

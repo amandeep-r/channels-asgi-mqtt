@@ -53,13 +53,13 @@ class Server(object):
 
         self.client = AWSIoTMQTTClient(self.clientId)
 
-        # self.client = mqtt.Client(client_id=self.client_id, userdata={
-        #     "server": self,
-        #     "channel": self.channel,
-        #     "host": self.host,
-        #     "port": self.port,
-        # })
-        # self.username = username
+        self.client = mqtt.Client(client_id=self.client_id, userdata={
+            "server": self,
+            "channel": self.channel,
+            "host": self.host,
+            "port": self.port,
+        })
+        self.username = username
         # Using certfiles instead of username/password
         self.username = None
         self.password = password
@@ -73,16 +73,17 @@ class Server(object):
         self.privateKeyPath = "privkey.out"
         self.configureCertFiles()
 
-        self.client.configureEndpoint(self.host, self.port)
-        self.client.configureCredentials(self.rootCAPath, self.privateKeyPath, self.certificatePath)
+        # self.client.configureEndpoint(self.host, self.port)
+        # self.client.configureCredentials(self.rootCAPath, self.privateKeyPath, self.certificatePath)
 
-        self.client.configureAutoReconnectBackoffTime(1, 32, 20)
-        self.client.configureOfflinePublishQueueing(-1)  # Infinite offline Publish self.in_topicqueueing
-        self.client.configureDrainingFrequency(2)  # Draining: 2 Hz
-        self.client.configureConnectDisconnectTimeout(10)  # 10 sec
-        self.client.configureMQTTOperationTimeout(5)  # 5 sec
+        # self.client.configureAutoReconnectBackoffTime(1, 32, 20)
+        # self.client.configureOfflinePublishQueueing(-1)  # Infinite offline Publish self.in_topicqueueing
+        # self.client.configureDrainingFrequency(2)  # Draining: 2 Hz
+        # self.client.configureConnectDisconnectTimeout(10)  # 10 sec
+        # self.client.configureMQTTOperationTimeout(5)  # 5 sec
 
         # self.client.tls_set(ca_certs=self.rootCAPath, certfile=self.certificatePath, keyfile=self.privateKeyPath)
+        self.client.tls_set(ca_certs=self.rootCAPath,certfile=self.certificatePath, keyfile=self.privateKeyPath, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_SSLv23)
         self.topics_subscription = topics_subscription or [("#", 2),]
         assert isinstance(self.topics_subscription, list), "Topic subscription must be a list with (topic, qos)"
 
@@ -101,16 +102,17 @@ class Server(object):
                 f.write(base64.b64decode(os.getenv("AWS_PK")) )
 
             with open(self.certRootDir + self.rootCAPath, "w") as f:
-                    f.write(requests.get(
-                        "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem").text)
+                pem_url = "https://www.amazontrust.com/repository/AmazonRootCA1.pem"
+                # pem_url = "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem"     
+                f.write(requests.get(pem_url).text)
         except Exception as e:
             self.logger.debug("Messenger Error: Certificate and Private Key ENV Variable Missing! %s", e)
 
     def _on_connect(self, client, userdata, flags, rc):
         self.logger.info("Connected with status {}".format(rc))
-        print("subscribing to: %r" % self.topics_subscription)
-        rv,test = client.subscribe(self.topics_subscription,1,self._on_message)
-        print("Subscribe Status: %r" % rv)
+        self.logger.info("Subscribing to: %r" % self.topics_subscription)
+        rv, test = client.subscribe(self.topics_subscription,1,self._on_message)
+        self.logger.debug("Subscribe Status: %r" % rv)
 
 
     def _on_disconnect(self, client, userdata, rc):
@@ -189,14 +191,14 @@ class Server(object):
             self.client.tls_set_context(context=None)
             self.client.username_pw_set(username=self.username, password=self.password)
         
-        rv = self.client.connect()
+        rv = self.client.connect(self.host, self.port)
 
-        self.logger.info("Connection Status: %r", rv)
+        self.logger.debug("Connection Status: %r", rv)
         self.logger.info("Starting loop")
 
         while True:
-            # self.client.loop(0.1)
-            #logger.debug("Restarting loop")
+            self.client.loop(0.1)
+            self.logger.debug("Restarting loop")
             await asyncio.sleep(0.1)
 
 
