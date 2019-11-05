@@ -228,8 +228,13 @@ class Server(object):
         self.logger.info("Loop for messages pool")
 
         while True:
-            self.logger.info("Wait for a message from channel %s", self.mqtt_channel_name)
-            self._mqtt_receive(await self.channel.receive(self.mqtt_channel_name))
+            break # break pulling messages from channel
+            self.logger.info("Received a message in channel %s", self.mqtt_channel_name)
+            result = await self.channel.receive(self.mqtt_channel_name)
+            self._mqtt_receive(result)
+            await asyncio.sleep(0.1)
+            # self.logger.info("Wait for a message from channel %s", self.mqtt_channel_name)
+            # self._mqtt_receive(await self.channel.receive(self.mqtt_channel_name))
 
     def stop_server(self, signum):
         self.logger.info("Received signal {}, terminating".format(signum))
