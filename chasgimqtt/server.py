@@ -14,6 +14,7 @@ import base64
 import uuid
 
 import requests
+import ssl
 
 logger = logging.getLogger(__name__)
 
