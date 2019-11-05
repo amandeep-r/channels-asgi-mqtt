@@ -51,7 +51,7 @@ class Server(object):
 
         self.clientid = "CLOUD_SERVER_" + str(uuid.uuid4().hex)[0:6] #NOT farm serial number
 
-        self.client = AWSIoTMQTTClient(self.clientId)
+        # self.client = AWSIoTMQTTClient(self.clientId)
 
         self.client = mqtt.Client(client_id=self.client_id, userdata={
             "server": self,
