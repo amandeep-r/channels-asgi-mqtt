@@ -205,7 +205,7 @@ class Server(object):
 
     def _mqtt_receive(self, msg):
         """
-        Receive a menssaje from Channel `mqtt.pub` and send it to MQTT broker
+        Receive a message from Channel `mqtt.pub` and send it to MQTT broker
         """
         self.logger.info("Receive raw messages:\r\n%s", msg)
         # We only listen for messages from mqtt_channel_pub
@@ -216,7 +216,7 @@ class Server(object):
             if not isinstance(payload, dict):
                 payload = json.loads(payload)
 
-            self.logger.info("Receive a menssage with payload:\r\n%s", msg)
+            self.logger.info("Receive a message with payload:\r\n%s", msg)
             self.client.publish(
                     payload['topic'], 
                     payload['payload'], 
@@ -228,11 +228,12 @@ class Server(object):
         self.logger.info("Loop for messages pool")
 
         while True:
-            break # break pulling messages from channel
+            # break # break pulling messages from channel
             self.logger.info("Received a message in channel %s", self.mqtt_channel_name)
             result = await self.channel.receive(self.mqtt_channel_name)
             self._mqtt_receive(result)
-            await asyncio.sleep(0.1)
+            break
+            # await asyncio.sleep(0.1)
             # self.logger.info("Wait for a message from channel %s", self.mqtt_channel_name)
             # self._mqtt_receive(await self.channel.receive(self.mqtt_channel_name))
 

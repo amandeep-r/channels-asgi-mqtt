@@ -100,11 +100,11 @@ while True:
 	# client.loop(0.5)
 	ptime = datetime.now().isoformat()
 	test_data['message'] = ptime
-	test_data['water_gpd'] += 0.25
+	test_data['water_gpd'] += 0.1
 	client.publish("babylon/farm_out", json.dumps(test_data), qos=1)
 	# .wait_for_publish()
 	print("published: %s" % ptime)
-	sleep(2)
+	sleep(5)
 
 # Blocking call that processes network traffic, dispatches callbacks and
 # handles reconnecting.
