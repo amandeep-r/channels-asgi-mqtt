@@ -74,16 +74,7 @@ class Server(object):
         self.privateKeyPath = "privkey.out"
         self.configureCertFiles()
 
-        # self.client.configureEndpoint(self.host, self.port)
-        # self.client.configureCredentials(self.rootCAPath, self.privateKeyPath, self.certificatePath)
 
-        # self.client.configureAutoReconnectBackoffTime(1, 32, 20)
-        # self.client.configureOfflinePublishQueueing(-1)  # Infinite offline Publish self.in_topicqueueing
-        # self.client.configureDrainingFrequency(2)  # Draining: 2 Hz
-        # self.client.configureConnectDisconnectTimeout(10)  # 10 sec
-        # self.client.configureMQTTOperationTimeout(5)  # 5 sec
-
-        # self.client.tls_set(ca_certs=self.rootCAPath, certfile=self.certificatePath, keyfile=self.privateKeyPath)
         self.client.tls_set(ca_certs=self.rootCAPath,certfile=self.certificatePath, keyfile=self.privateKeyPath, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_SSLv23)
         self.topics_subscription = topics_subscription or [("#", 2),]
         assert isinstance(self.topics_subscription, list), "Topic subscription must be a list with (topic, qos)"
@@ -147,7 +138,7 @@ class Server(object):
         try:
             payload = json.loads(payload)
         except Exception as e:
-            self.logger.debug("Payload is nos a JSON Serializable: %r", e)
+            self.logger.debug("Payload is not JSON Serializable: %r", e)
         
         self.logger.debug("Raw message {}".format(payload))
 
@@ -186,7 +177,8 @@ class Server(object):
         """
         This is the main loop pool for receiving MQTT messages
         """
-        self.logger.debug("Inside Client Pool Start!")
+        self.logger.debug("Inside Receive Pool Start!")
+        self.logger.debug(asyncio.all_tasks())
         if self.username:
             self.logger.info("Connecting with Username: Using TLS!!!")
             self.client.tls_set_context(context=None)
@@ -198,6 +190,7 @@ class Server(object):
         self.logger.info("Starting loop")
 
         while True:
+            # Check for MQTT Messages
             self.client.loop(0.1)
             # self.logger.debug("Restarting loop")
             await asyncio.sleep(0.1)
@@ -214,6 +207,7 @@ class Server(object):
             payload = msg['text']
 
             if not isinstance(payload, dict):
+                self.logger.debug("For some reason payload isn't a dictionary!")
                 payload = json.loads(payload)
 
             self.logger.info("Receive a message with payload:\r\n%s", msg)
@@ -225,16 +219,17 @@ class Server(object):
 
 
     async def client_pool_message(self):
-        self.logger.info("Loop for messages pool")
-
+        self.logger.debug("Inside Send Pool Start!")
+        self.logger.debug(asyncio.all_tasks())
         while True:
             # break # break pulling messages from channel
-            self.logger.info("Received a message in channel %s", self.mqtt_channel_name)
-            result = await self.channel.receive(self.mqtt_channel_name)
-            self._mqtt_receive(result)
-            await sleep(0)
-            # self.logger.info("Wait for a message from channel %s", self.mqtt_channel_name)
-            # self._mqtt_receive(await self.channel.receive(self.mqtt_channel_name))
+            self.logger.info("Wait for a message from channel %s", self.mqtt_channel_name)
+            self._mqtt_receive(await self.channel.receive(self.mqtt_channel_name))
+            # self.logger.info("Received a message in channel %s", self.mqtt_channel_name)
+            # result = await self.channel.receive(self.mqtt_channel_name)
+            # self._mqtt_receive(result)
+            await sleep(0.1)
+
 
     def stop_server(self, signum):
         self.logger.info("Received signal {}, terminating".format(signum))
@@ -255,17 +250,22 @@ class Server(object):
                     functools.partial(self.stop_server, signame)
                 )
 
-        print("Event loop running forever, press Ctrl+C to interrupt.")
-        print("pid %s: send SIGINT or SIGTERM to exit." % os.getpid())
+        self.logger.info("Event loop running forever, press Ctrl+C to interrupt.")
+        self.logger.info("pid %s: send SIGINT or SIGTERM to exit." % os.getpid())
+
 
         tasks = asyncio.gather(*[
                 asyncio.ensure_future(self.client_pool_start()),
                 asyncio.ensure_future(self.client_pool_message()),
             ])
+        # ensure_future == create_task
+        # task = asyncio.create_task(coro())
 
+        # Run Tasks concurrently
         asyncio.wait(tasks)
 
         try:
+            # Run the event loop until stop() is called.
             loop.run_forever()
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())            
