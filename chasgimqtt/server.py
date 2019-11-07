@@ -210,12 +210,16 @@ class Server(object):
                 self.logger.debug("For some reason payload isn't a dictionary!")
                 payload = json.loads(payload)
 
-            self.logger.info("Receive a message with payload:\r\n%s", msg)
-            self.client.publish(
-                    payload['topic'], 
-                    payload['payload'], 
-                    qos=payload.get('qos', 1), 
-                    retain=False)
+            self.logger.info("Received a message with payload:\r\n%s", msg)
+            try:
+                rc, mid = self.client.publish(
+                        payload['topic'], 
+                        payload['payload'], 
+                        qos=payload.get('qos', 1), 
+                        retain=False)
+                self.logger.debug(f"publish status: {rc},{mid}")
+            except Exception as e:
+                self.logger.error(f"Error publishing! {e}")
 
 
     async def client_pool_message(self):
