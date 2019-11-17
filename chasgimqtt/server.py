@@ -19,261 +19,260 @@ import ssl
 logger = logging.getLogger(__name__)
 
 async def mqtt_send(future, channel_layer, channel, event):
-    result = await channel_layer.send(channel, event)
-    future.set_result(result)
+	result = await channel_layer.send(channel, event)
+	future.set_result(result)
 
 async def mqtt_group_send(future, channel_layer, group, event):
-    result  = await channel_layer.group_send(group, event)
-    future.set_result(result)
+	result  = await channel_layer.group_send(group, event)
+	future.set_result(result)
 
 # Only for groups
 async def mqtt_group_add(future, channel_layer, group):
-    channel_layer.channel_name = channel_layer.channel_name or await channel_layer.new_channel()
-    result = await channel_layer.group_add(group, channel_layer.channel_name)
-    future.set_result(result)
+	channel_layer.channel_name = channel_layer.channel_name or await channel_layer.new_channel()
+	result = await channel_layer.group_add(group, channel_layer.channel_name)
+	future.set_result(result)
 
 # Only for groups
 async def mqtt_group_discard(future, channel_layer, group):
-    result = await channel_layer.group_discard(group, channel_layer.channel_name)
-    future.set_result(result)
+	result = await channel_layer.group_discard(group, channel_layer.channel_name)
+	future.set_result(result)
 
 
 class Server(object):
-    def __init__(self, channel, host, port, username=None, password=None, 
-            client_id=None, topics_subscription=None, mqtt_channel_name = None, 
-            mqtt_channel_sub=None, mqtt_channel_pub=None):
+	def __init__(self, channel, host, port, username=None, password=None, 
+			client_id=None, topics_subscription=None, mqtt_channel_name = None, 
+			mqtt_channel_sub=None, mqtt_channel_pub=None):
 
 
-        self.logger = logging.getLogger("mqtt")
-        self.channel = channel
-        self.host = host
-        self.port = port
-        # self.client_id = client_id
+		self.logger = logging.getLogger("mqtt")
+		self.channel = channel
+		self.host = host
+		self.port = port
+		# self.client_id = client_id
 
-        self.client_id = "CLOUD_SERVER_" + str(uuid.uuid4().hex)[0:6] #NOT farm serial number
+		self.client_id = "CLOUD_SERVER_" + str(uuid.uuid4().hex)[0:6] #NOT farm serial number
 
-        # self.client = AWSIoTMQTTClient(self.clientId)
+		# self.client = AWSIoTMQTTClient(self.clientId)
 
-        self.client = mqtt.Client(client_id=self.client_id, userdata={
-            "server": self,
-            "channel": self.channel,
-            "host": self.host,
-            "port": self.port,
-        })
-        self.username = username
-        # Using certfiles instead of username/password
-        self.username = None
-        self.password = password
-        self.client.on_connect = self._on_connect
-        self.client.on_disconnect = self._on_disconnect
-        self.client.on_message = self._on_message
+		self.client = mqtt.Client(client_id=self.client_id, userdata={
+			"server": self,
+			"channel": self.channel,
+			"host": self.host,
+			"port": self.port,
+		})
+		self.username = username
+		# Using certfiles instead of username/password
+		self.username = None
+		self.password = password
+		self.client.on_connect = self._on_connect
+		self.client.on_disconnect = self._on_disconnect
+		self.client.on_message = self._on_message
 
-        self.certRootDir = "/usr/src/app/mqtt_certs/"
-        self.rootCAPath = "root-CA.crt"
-        self.certificatePath = "pem.crt"
-        self.privateKeyPath = "privkey.out"
-        self.configureCertFiles()
-
-
-        self.client.tls_set(ca_certs=self.rootCAPath,certfile=self.certificatePath, keyfile=self.privateKeyPath, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_SSLv23)
-        self.topics_subscription = topics_subscription or [("#", 2),]
-        assert isinstance(self.topics_subscription, list), "Topic subscription must be a list with (topic, qos)"
-
-        self.mqtt_channel_name = mqtt_channel_name or "mqtt"
-        self.mqtt_channel_pub = mqtt_channel_pub or "mqtt.pub"
-        self.mqtt_channel_sub = mqtt_channel_sub or "mqtt.sub"
+		self.certRootDir = "/usr/src/app/mqtt_certs/"
+		self.rootCAPath = "root-CA.crt"
+		self.certificatePath = "pem.crt"
+		self.privateKeyPath = "privkey.out"
+		self.configureCertFiles()
 
 
-    def configureCertFiles(self):
-        try:
-            with open(self.certRootDir + self.certificatePath, "wb") as f:
-                # print(os.getenv("AWS_CERT"))
-                f.write(base64.b64decode(os.getenv("AWS_CERT")) )
+		self.client.tls_set(ca_certs=self.rootCAPath,certfile=self.certificatePath, keyfile=self.privateKeyPath, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_SSLv23)
+		self.topics_subscription = topics_subscription or [("#", 2),]
+		assert isinstance(self.topics_subscription, list), "Topic subscription must be a list with (topic, qos)"
 
-            with open(self.certRootDir + self.privateKeyPath, "wb") as f:
-                f.write(base64.b64decode(os.getenv("AWS_PK")) )
-
-            with open(self.certRootDir + self.rootCAPath, "w") as f:
-                # pem_url = "https://www.amazontrust.com/repository/AmazonRootCA1.pem"
-                pem_url = "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem"
-                f.write(requests.get(pem_url).text)
-        except Exception as e:
-            self.logger.debug("Messenger Error: Certificate and Private Key ENV Variable Missing! %s", e)
-
-    def _on_connect(self, client, userdata, flags, rc):
-        self.logger.info("Connected with status {}".format(rc))
-        self.logger.info("Subscribing to: %r" % self.topics_subscription)
-        rv, test = client.subscribe(self.topics_subscription,1,self._on_message)
-        self.logger.debug("Subscribe Status: %r" % rv)
+		self.mqtt_channel_name = mqtt_channel_name or "mqtt"
+		self.mqtt_channel_pub = mqtt_channel_pub or "mqtt.pub"
+		self.mqtt_channel_sub = mqtt_channel_sub or "mqtt.sub"
 
 
-    def _on_disconnect(self, client, userdata, rc):
-        self.logger.info("Disconnected")
-        if not self.stop:
-            j = 3
-            for i in range(j):
-                self.logger.info("Trying to reconnect")
-                try:
-                    client.reconnect()
-                    self.logger.info("Reconnected")
-                    break
-                except Exception as e:
-                    if i < j:
-                        self.logger.warn(e)
-                        time.sleep(1)
-                        continue
-                    else:
-                        raise
+	def configureCertFiles(self):
+		try:
+			with open(self.certRootDir + self.certificatePath, "wb") as f:
+				# print(os.getenv("AWS_CERT"))
+				f.write(base64.b64decode(os.getenv("AWS_CERT")) )
 
-    def _mqtt_send_got_result(self, future):
-        self.logger.debug("Sending message to MQTT channel.")
-        result = future.result()
-        if result:
-            self.logger.debug("Result: %s", result)
+			with open(self.certRootDir + self.privateKeyPath, "wb") as f:
+				f.write(base64.b64decode(os.getenv("AWS_PK")) )
 
-    def _on_message(self, client, userdata, message):
-        self.logger.debug("Received message from topic {}".format(message.topic))
-        payload = message.payload.decode("utf-8")
+			with open(self.certRootDir + self.rootCAPath, "w") as f:
+				# pem_url = "https://www.amazontrust.com/repository/AmazonRootCA1.pem"
+				pem_url = "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem"
+				f.write(requests.get(pem_url).text)
+		except Exception as e:
+			self.logger.debug("Messenger Error: Certificate and Private Key ENV Variable Missing! %s", e)
 
-        try:
-            payload = json.loads(payload)
-        except Exception as e:
-            self.logger.debug("Payload is not JSON Serializable: %r", e)
-        
-        self.logger.debug("Raw message {}".format(payload))
-
-        # Compose a message for Channel with raw data received from MQTT
-        msg = {
-            "topic": message.topic,
-            "payload": payload,
-            "qos": message.qos,
-            "host": userdata["host"],
-            "port": userdata["port"],
-        }
-
-        try:
-            # create a coroutine and send
-            future = asyncio.Future()
-            asyncio.ensure_future(
-                    mqtt_send(
-                        future, 
-                        self.channel, 
-                        self.mqtt_channel_name,
-                        {
-                            "type": self.mqtt_channel_sub,
-                            "text": msg
-                        })
-                )
-
-            # attach callback for logs only
-            future.add_done_callback(self._mqtt_send_got_result)
-
-        except Exception as e:
-            self.logger.error("Cannot send message {}".format(msg))
-            self.logger.exception(e)
+	def _on_connect(self, client, userdata, flags, rc):
+		self.logger.info("Connected with status {}".format(rc))
+		self.logger.info("Subscribing to: %r" % self.topics_subscription)
+		rv, test = client.subscribe(self.topics_subscription,1,self._on_message)
+		self.logger.debug("Subscribe Status: %r" % rv)
 
 
-    async def client_pool_start(self):
-        """
-        This is the main loop pool for receiving MQTT messages
-        """
-        self.logger.debug("Inside Receive Pool Start!")
-        self.logger.debug(asyncio.all_tasks())
-        if self.username:
-            self.logger.info("Connecting with Username: Using TLS!!!")
-            self.client.tls_set_context(context=None)
-            self.client.username_pw_set(username=self.username, password=self.password)
-        
-        rv = self.client.connect(self.host, self.port)
+	def _on_disconnect(self, client, userdata, rc):
+		self.logger.info("Disconnected")
+		if not self.stop:
+			j = 3
+			for i in range(j):
+				self.logger.info("Trying to reconnect")
+				try:
+					client.reconnect()
+					self.logger.info("Reconnected")
+					break
+				except Exception as e:
+					if i < j:
+						self.logger.warn(e)
+						time.sleep(1)
+						continue
+					else:
+						raise
 
-        self.logger.debug("Connection Status: %r", rv)
-        self.logger.info("Starting loop")
+	def _mqtt_send_got_result(self, future):
+		self.logger.debug("Sending message to MQTT channel.")
+		result = future.result()
+		if result:
+			self.logger.debug("Result: %s", result)
 
-        while True:
-            # Check for MQTT Messages
-            self.client.loop(0.1)
-            # self.logger.debug("Restarting loop")
-            await asyncio.sleep(0.1)
+	def _on_message(self, client, userdata, message):
+		self.logger.debug("Received message from topic {}".format(message.topic))
+		payload = message.payload.decode("utf-8")
+
+		try:
+			payload = json.loads(payload)
+		except Exception as e:
+			self.logger.debug("Payload is not JSON Serializable: %r", e)
+		
+		self.logger.debug("Raw message {}".format(payload))
+
+		# Compose a message for Channel with raw data received from MQTT
+		msg = {
+			"topic": message.topic,
+			"payload": payload,
+			"qos": message.qos,
+			"host": userdata["host"],
+			"port": userdata["port"],
+		}
+
+		try:
+			# create a coroutine and send
+			future = asyncio.Future()
+			asyncio.ensure_future(
+					mqtt_send(
+						future, 
+						self.channel, 
+						self.mqtt_channel_name,
+						{
+							"type": self.mqtt_channel_sub,
+							"text": msg
+						})
+				)
+
+			# attach callback for logs only
+			future.add_done_callback(self._mqtt_send_got_result)
+
+		except Exception as e:
+			self.logger.error("Cannot send message {}".format(msg))
+			self.logger.exception(e)
+
+	def _mqtt_receive(self, msg):
+		"""
+		Receive a message from Channel `mqtt.pub` and send it to MQTT broker
+		"""
+		self.logger.info("Receive raw messages:\r\n%s", msg)
+		# We only listen for messages from mqtt_channel_pub
+		if msg['type'] == self.mqtt_channel_pub:
+
+			payload = msg['text']
+
+			if not isinstance(payload, dict):
+				self.logger.debug("For some reason payload isn't a dictionary!")
+				payload = json.loads(payload)
+
+			self.logger.info("Received a message with payload:\r\n%s", msg)
+			try:
+				rc, mid = self.client.publish(
+						payload['topic'], 
+						payload['payload'], 
+						qos=payload.get('qos', 1), 
+						retain=False)
+				self.logger.debug(f"publish status: {rc},{mid}")
+			except Exception as e:
+				self.logger.error(f"Error publishing! {e}")
 
 
-    def _mqtt_receive(self, msg):
-        """
-        Receive a message from Channel `mqtt.pub` and send it to MQTT broker
-        """
-        self.logger.info("Receive raw messages:\r\n%s", msg)
-        # We only listen for messages from mqtt_channel_pub
-        if msg['type'] == self.mqtt_channel_pub:
+	async def client_pool_message(self):
+		self.logger.debug("Inside Send Pool Start!")
+		self.logger.debug(asyncio.all_tasks())
+		while True:
+			# break # break pulling messages from channel
+			self.logger.info("Wait for a message from channel %s", self.mqtt_channel_name)
+			self._mqtt_receive(await self.channel.receive(self.mqtt_channel_name))
+			# self.logger.info("Received a message in channel %s", self.mqtt_channel_name)
+			# result = await self.channel.receive(self.mqtt_channel_name)
+			# self._mqtt_receive(result)
+			await sleep(0.1)
 
-            payload = msg['text']
+	async def client_pool_start(self):
+		"""
+		This is the main loop pool for receiving MQTT messages
+		"""
+		self.logger.debug("Inside Receive Pool Start!")
+		self.logger.debug(asyncio.all_tasks())
+		if self.username:
+			self.logger.info("Connecting with Username: Using TLS!!!")
+			self.client.tls_set_context(context=None)
+			self.client.username_pw_set(username=self.username, password=self.password)
+		
+		rv = self.client.connect(self.host, self.port)
 
-            if not isinstance(payload, dict):
-                self.logger.debug("For some reason payload isn't a dictionary!")
-                payload = json.loads(payload)
+		self.logger.debug("Connection Status: %r", rv)
+		self.logger.info("Starting loop")
 
-            self.logger.info("Received a message with payload:\r\n%s", msg)
-            try:
-                rc, mid = self.client.publish(
-                        payload['topic'], 
-                        payload['payload'], 
-                        qos=payload.get('qos', 1), 
-                        retain=False)
-                self.logger.debug(f"publish status: {rc},{mid}")
-            except Exception as e:
-                self.logger.error(f"Error publishing! {e}")
-
-
-    async def client_pool_message(self):
-        self.logger.debug("Inside Send Pool Start!")
-        self.logger.debug(asyncio.all_tasks())
-        while True:
-            # break # break pulling messages from channel
-            self.logger.info("Wait for a message from channel %s", self.mqtt_channel_name)
-            self._mqtt_receive(await self.channel.receive(self.mqtt_channel_name))
-            # self.logger.info("Received a message in channel %s", self.mqtt_channel_name)
-            # result = await self.channel.receive(self.mqtt_channel_name)
-            # self._mqtt_receive(result)
-            await sleep(0.1)
+		while True:
+			# Check for MQTT Messages
+			self.client.loop(0.1)
+			# self.logger.debug("Restarting loop")
+			await asyncio.sleep(0.1)
 
 
-    def stop_server(self, signum):
-        self.logger.info("Received signal {}, terminating".format(signum))
-        self.stop = True
-        for task in asyncio.Task.all_tasks():
-            task.cancel()
-        self.loop.stop()
+	def stop_server(self, signum):
+		self.logger.info("Received signal {}, terminating".format(signum))
+		self.stop = True
+		for task in asyncio.Task.all_tasks():
+			task.cancel()
+		self.loop.stop()
 
 
-    def run(self):
-        self.stop = False
-        loop = asyncio.get_event_loop()
-        self.loop = loop
+	def run(self):
+		self.stop = False
+		loop = asyncio.get_event_loop()
+		self.loop = loop
 
-        for signame in ('SIGINT', 'SIGTERM'):
-            loop.add_signal_handler(
-                    getattr(signal, signame),
-                    functools.partial(self.stop_server, signame)
-                )
+		# Catch signals and stop server
+		for signame in ('SIGINT', 'SIGTERM'):
+			loop.add_signal_handler(
+					getattr(signal, signame),
+					functools.partial(self.stop_server, signame)
+				)
 
-        self.logger.info("Event loop running forever, press Ctrl+C to interrupt.")
-        self.logger.info("pid %s: send SIGINT or SIGTERM to exit." % os.getpid())
+		self.logger.info("Event loop running forever, press Ctrl+C to interrupt.")
+		self.logger.info("pid %s: send SIGINT or SIGTERM to exit." % os.getpid())
 
 
-        tasks = asyncio.gather(*[
-                asyncio.ensure_future(self.client_pool_start()),
-                asyncio.ensure_future(self.client_pool_message()),
-            ])
-        # ensure_future == create_task
-        # task = asyncio.create_task(coro())
+		tasks = asyncio.gather(*[
+				asyncio.create_task(self.client_pool_start()),
+				asyncio.create_task(self.client_pool_message()),
+			])
+		# ensure_future == create_task
+		# task = asyncio.create_task(coro())
 
-        # Run Tasks concurrently
-        asyncio.wait(tasks)
+		# Run Tasks concurrently
+		asyncio.wait(tasks)
 
-        try:
-            # Run the event loop until stop() is called.
-            loop.run_forever()
-        finally:
-            loop.run_until_complete(loop.shutdown_asyncgens())            
-            loop.close()
-            self.logger.info("Successfully stopped event loop. Disconnecting from MQTT.")
-        
-        self.client.disconnect()
+		try:
+			# Run the event loop until stop() is called.
+			loop.run_forever()
+		finally:
+			loop.run_until_complete(loop.shutdown_asyncgens())            
+			loop.close()
+			self.logger.info("Successfully stopped event loop. Disconnecting from MQTT.")
+		
+		self.client.disconnect()
