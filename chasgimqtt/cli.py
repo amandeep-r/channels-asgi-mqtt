@@ -6,7 +6,7 @@ import logging
 from .server import Server
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('mqtt')
 
 
 def channel_type(channel_name):
