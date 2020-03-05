@@ -67,9 +67,9 @@ class Server(object):
 		self.client.on_message = self._on_message
 
 		self.certRootDir = "/usr/src/app/mqtt_certs/"
-		self.rootCAPath = "root-CA.crt"
-		self.certificatePath = "pem.crt"
-		self.privateKeyPath = "privkey.out"
+		self.rootCAPath = self.certRootDir + "root-CA.crt"
+		self.certificatePath = self.certRootDir + "pem.crt"
+		self.privateKeyPath = self.certRootDir + "privkey.out"
 		self.configureCertFiles()
 
 
@@ -91,13 +91,13 @@ class Server(object):
 
 	def configureCertFiles(self):
 		try:
-			with open(self.certRootDir + self.certificatePath, "wb") as f:
+			with open(self.certificatePath, "wb") as f:
 				f.write(base64.b64decode(os.getenv("AWS_CERT")) )
 
-			with open(self.certRootDir + self.privateKeyPath, "wb") as f:
+			with open(self.privateKeyPath, "wb") as f:
 				f.write(base64.b64decode(os.getenv("AWS_PK")) )
 
-			with open(self.certRootDir + self.rootCAPath, "w") as f:
+			with open(self.rootCAPath, "w") as f:
 				pem_url = "https://www.amazontrust.com/repository/AmazonRootCA1.pem"
 				# pem_url = "https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem"
 				f.write(requests.get(pem_url).text)
